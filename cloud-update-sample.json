@@ -1,0 +1,22 @@
+{
+  "version": "2.0",
+  "updateTime": "2026-07-11",
+  "books": [
+    {
+      "id": "gaokao-core",
+      "name": "高考核心词库(更新版)",
+      "items": [
+        ["abandon", "v.", "放弃；遗弃", "高频", ["abandon oneself to 沉溺于"], ["常考动词搭配"], ["He abandoned smoking before the exam."]],
+        ["ability", "n.", "能力；才能", "高频", ["have the ability to do 有能力做"], ["ability 后常接不定式"], ["Reading improves our ability to think."]]
+      ]
+    },
+    {
+      "id": "cloud-new-book",
+      "name": "云端新增词库示例",
+      "editable": true,
+      "items": [
+        ["example", "n.", "例子；榜样", "高频", ["set an example 树立榜样"], ["for example 例如"], ["This is an example."]]
+      ]
+    }
+  ]
+}

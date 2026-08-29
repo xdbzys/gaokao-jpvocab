@@ -1,0 +1,146 @@
+name: Build & Release APK
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build
+
+      - name: Copy app-update.json to dist for GitHub Pages
+        run: cp app-update.json dist/app-update.json
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release-key.jks
+
+      - name: Sync to Android
+        run: npx cap sync android
+
+      - name: Build APK with fixed signature
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace \
+            -PMYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
+            -PMYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }} \
+            -PMYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+            -PMYAPP_UPLOAD_STORE_FILE=release-key.jks
+
+      - name: Upload APK + app-update.json to Gitee via Git push
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        continue-on-error: true
+        run: |
+          cd /tmp
+          git clone --depth 1 --branch master https://oauth2:${GITEE_TOKEN}@gitee.com/xdbzys/app.git gitee-push 2>/dev/null || git clone --depth 1 https://gitee.com/xdbzys/app.git gitee-push
+          cd gitee-push
+          cp /home/runner/work/gaokao-vocab/gaokao-vocab/android/app/build/outputs/apk/debug/app-debug.apk gaokao-vocab.apk
+          cp /home/runner/work/gaokao-vocab/gaokao-vocab/app-update.json app-update.json
+          git config user.name "ci-bot"
+          git config user.email "ci@bot.com"
+          git add gaokao-vocab.apk app-update.json
+          git commit -m "auto update apk v${{ github.run_number }}" || echo "no changes"
+          git push origin master 2>&1 | tail -5 || echo "push failed"
+          echo "APK and app-update.json pushed to Gitee"
+
+      - name: Rename web HTML for release
+        run: cp dist/index.html "背群英.html"
+
+      - name: Upload web HTML to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          files: |
+            dist/index.html
+            背群英.html
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          body: |
+            Auto build from GitHub Actions
+            Run #${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gaokao-vocab-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      # v2.43.0: 把 APK 镜像提交进仓库，供 jsDelivr CDN 直链下载。
+      # 旧版(2.41.0)应用内更新的第2下载源硬编码为 jsDelivr @master 路径，
+      # 此步骤保证该源始终有最新 APK（[skip ci] 防止构建死循环）
+      - name: Mirror APK into repo (jsDelivr download source)
+        continue-on-error: true
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci@bot.com"
+          git add -f android/app/build/outputs/apk/debug/app-debug.apk
+          if git diff --cached --quiet; then
+            echo "APK unchanged, skip mirror commit"
+          else
+            git commit -m "chore: mirror APK build #${{ github.run_number }} for jsDelivr [skip ci]"
+            git push
+          fi
+
+      # 刷新 jsDelivr 对 @master 分支文件的 CDN 缓存，保证直链立即拿到新 APK
+      - name: Purge jsDelivr CDN cache
+        continue-on-error: true
+        run: |
+          sleep 20
+          curl -s -m 120 "https://purge.jsdelivr.net/gh/xdbzys/gaokao-vocab@master/android/app/build/outputs/apk/debug/app-debug.apk" || echo "purge failed (non-fatal)"
+
+      - name: Copy APK to dist
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk dist/app-debug.apk
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+        continue-on-error: true

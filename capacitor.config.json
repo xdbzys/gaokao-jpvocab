@@ -1,0 +1,8 @@
+{
+  "appId": "com.gaokao.jpvocab",
+  "appName": "背日单",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

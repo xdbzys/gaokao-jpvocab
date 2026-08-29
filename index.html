@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // 旧版浏览器兼容补丁（安卓10 WebView / Chromium 61-97 等）：补齐新语法时代的 API
+      (function () {
+        function def(obj, prop, value) {
+          if (obj[prop] === undefined) {
+            try { Object.defineProperty(obj, prop, { value: value, writable: true, configurable: true }); }
+            catch (e) { obj[prop] = value; }
+          }
+        }
+        // globalThis (Chrome 67+)
+        if (typeof globalThis === 'undefined') { window.globalThis = window; }
+        // String.prototype.replaceAll (Chrome 85+)：走正则以支持函数替换与 $ 模式
+        def(String.prototype, 'replaceAll', function (search, replacement) {
+          if (search instanceof RegExp) {
+            if (!search.global) throw new TypeError('String.prototype.replaceAll called with a non-global RegExp argument');
+            return this.replace(search, replacement);
+          }
+          var escaped = String(search).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
+          return String(this).replace(new RegExp(escaped, 'g'), replacement);
+        });
+        // Array.prototype.at / String.prototype.at (Chrome 92+)
+        function atImpl(n) {
+          n = Math.trunc(Number(n)) || 0;
+          if (n < 0) n += this.length;
+          if (n < 0 || n >= this.length) return undefined;
+          return this[n];
+        }
+        def(Array.prototype, 'at', atImpl);
+        def(String.prototype, 'at', function (n) {
+          n = Math.trunc(Number(n)) || 0;
+          if (n < 0) n += this.length;
+          if (n < 0 || n >= this.length) return undefined;
+          return this.charAt(n);
+        });
+        try {
+          if (typeof Int8Array === 'function' && Int8Array.prototype && Int8Array.prototype.at === undefined) {
+            var taProto = Object.getPrototypeOf(Int8Array.prototype);
+            if (taProto && taProto.at === undefined) def(taProto, 'at', atImpl);
+          }
+        } catch (e) {}
+        // Object.hasOwn (Chrome 93+)
+        def(Object, 'hasOwn', function (obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); });
+        // Array.prototype.findLast / findLastIndex (Chrome 97+)
+        def(Array.prototype, 'findLast', function (fn, thisArg) {
+          for (var i = this.length - 1; i >= 0; i--) { if (fn.call(thisArg, this[i], i, this)) return this[i]; }
+          return undefined;
+        });
+        def(Array.prototype, 'findLastIndex', function (fn, thisArg) {
+          for (var i = this.length - 1; i >= 0; i--) { if (fn.call(thisArg, this[i], i, this)) return i; }
+          return -1;
+        });
+        // structuredClone (Chrome 98+)：JSON 回退，覆盖普通数据场景
+        def(window, 'structuredClone', function (v) { return JSON.parse(JSON.stringify(v)); });
+        // Array.prototype.flat / flatMap (Chrome 69+) 兜底
+        def(Array.prototype, 'flat', function (d) {
+          d = d === undefined ? 1 : Math.floor(d); if (d < 0) d = 0;
+          var out = [];
+          (function walk(arr, depth) {
+            for (var i = 0; i < arr.length; i++) {
+              var x = arr[i];
+              if (Array.isArray(x) && depth < d) walk(x, depth + 1); else out.push(x);
+            }
+          })(this, 0);
+          return out;
+        });
+        def(Array.prototype, 'flatMap', function (fn, thisArg) {
+          var out = [];
+          for (var i = 0; i < this.length; i++) {
+            var r = fn.call(thisArg, this[i], i, this);
+            if (Array.isArray(r)) { for (var j = 0; j < r.length; j++) out.push(r[j]); } else out.push(r);
+          }
+          return out;
+        });
+        // Promise.allSettled (Chrome 76+)
+        def(Promise, 'allSettled', function (iterable) {
+          return Promise.all(Array.from(iterable).map(function (p) {
+            return Promise.resolve(p).then(
+              function (v) { return { status: 'fulfilled', value: v }; },
+              function (e) { return { status: 'rejected', reason: e }; }
+            );
+          }));
+        });
+        // String.prototype.matchAll (Chrome 73+)：返回数组（天然可迭代，兼容 for-of/展开/Array.from）
+        def(String.prototype, 'matchAll', function (regexp) {
+          if (!(regexp instanceof RegExp)) throw new TypeError('String.prototype.matchAll must be called with a RegExp');
+          var flags = String(regexp.flags || '');
+          if (flags.indexOf('g') < 0) throw new TypeError('String.prototype.matchAll must be called with a global RegExp');
+          var re = new RegExp(regexp.source, flags);
+          var str = String(this);
+          var results = [];
+          var m;
+          while ((m = re.exec(str)) !== null) {
+            var copy = m.slice(0);
+            copy.index = m.index;
+            copy.input = str;
+            results.push(copy);
+            if (m[0] === '') re.lastIndex++;
+            if (re.lastIndex > str.length) break;
+          }
+          return results;
+        });
+        // String.prototype.trimStart / trimEnd (Chrome 66+)
+        def(String.prototype, 'trimStart', function () { return String(this).replace(/^\s+/, ''); });
+        def(String.prototype, 'trimEnd', function () { return String(this).replace(/\s+$/, ''); });
+        // window.queueMicrotask (Chrome 71+)
+        def(window, 'queueMicrotask', function (cb) { Promise.resolve().then(cb); });
+        // navigator.clipboard.writeText (Chrome 66+)：execCommand 回退
+        try {
+          if (!navigator.clipboard || !navigator.clipboard.writeText) {
+            var clipWrite = function (text) {
+              return new Promise(function (resolve, reject) {
+                var ta = document.createElement('textarea');
+                ta.value = String(text);
+                ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus(); ta.select();
+                try {
+                  var ok = document.execCommand('copy');
+                  document.body.removeChild(ta);
+                  if (ok) resolve(); else reject(new Error('copy failed'));
+                } catch (e) { try { document.body.removeChild(ta); } catch (e2) {} reject(e); }
+              });
+            };
+            if (!navigator.clipboard) {
+              navigator.clipboard = { writeText: clipWrite, readText: function () { return Promise.resolve(''); } };
+            } else {
+              if (!navigator.clipboard.writeText) navigator.clipboard.writeText = clipWrite;
+              if (!navigator.clipboard.readText) navigator.clipboard.readText = function () { return Promise.resolve(''); };
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      // 在任何内容加载前，强制注销所有旧 Service Worker 并清空缓存
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
+        });
+        if (window.caches) {
+          caches.keys().then(function(keys) {
+            keys.forEach(function(k) { caches.delete(k); });
+          });
+        }
+      }
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#111827" />
+    <meta name="description" content="高中高考英语单词与短语背诵软件" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <!-- Apple PWA 支持 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="高考词汇" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <title>背群英</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

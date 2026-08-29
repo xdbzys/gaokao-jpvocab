@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>背群英 - 更新</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;padding:36px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+h1{font-size:22px;color:#333;margin:12px 0 4px}
+.sub{font-size:13px;color:#999;margin-bottom:20px}
+.log{background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:24px;text-align:left;font-size:13px;color:#555;line-height:2}
+.log b{color:#333}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;font-size:18px;font-weight:600;cursor:pointer;text-decoration:none;margin-bottom:10px}
+.pri{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.sec{background:#f0f0f0;color:#555;font-size:15px}
+.tip{font-size:11px;color:#bbb;margin-top:12px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>📚 背群英</h1>
+<p class="sub">v2.8.20 · 更新下载</p>
+<div class="log">
+<b>【修复】</b><br>
+✅ 修复更新检查失败（新增4条线路）<br>
+✅ 修复答题后显示错误答案<br>
+✅ 修复自动发音播放错误单词<br>
+<b>【优化】</b><br>
+✨ 增强导入功能识别<br>
+✨ 删除词库占位符数据
+</div>
+<a class="btn pri" id="d1" href="https://github.com/xdbzys/gaokao-vocab/releases/download/v90/app-debug.apk">📥 下载更新（GitHub）</a>
+<a class="btn sec" id="d2" href="https://gitee.com/xdbzys/app/raw/master/gaokao-vocab.apk">📥 备用下载（Gitee）</a>
+<p class="tip">点击按钮后等待下载完成<br>下载完成后在通知栏点击安装<br>安装后以后更新将自动在APP内完成</p>
+</div>
+<script>
+// 自动检测下载链接可用性，高亮推荐链接
+fetch('https://gitee.com/xdbzys/app/raw/master/gaokao-vocab.apk',{method:'HEAD',mode:'no-cors'}).then(()=>{}).catch(()=>{document.getElementById('d2').style.opacity='.4'});
+fetch('https://github.com/xdbzys/gaokao-vocab/releases/download/v90/app-debug.apk',{method:'HEAD',mode:'no-cors'}).then(()=>{}).catch(()=>{document.getElementById('d1').style.opacity='.4'});
+</script>
+</body>
+</html>

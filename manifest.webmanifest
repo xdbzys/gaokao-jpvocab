@@ -1,0 +1,17 @@
+{
+  "name": "背群英",
+  "short_name": "高考词汇",
+  "description": "高中英语高考单词和短语背诵软件",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
