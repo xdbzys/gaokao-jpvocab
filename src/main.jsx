@@ -13,14 +13,14 @@ import { masterVocabSeed, masterVocabLookup } from './gaokaoMasterVocab';
 /* ============================
    APP 版本常量
    ============================ */
-const APP_VERSION = '2.43.0';
-const APP_VERSION_CODE = 194;
-// v2.43.0 更新渠道修复：Gitee raw 大文件经常被 WAF/302 签名拦截导致"无法更新"
-// 改为 GitHub Releases 直链优先（CI 每次构建自动上传），Gitee 与 Pages 作后备
+const APP_VERSION = '2.45.0';
+const APP_VERSION_CODE = 197;
+// v2.45.0 更新渠道修复：修复所有更新源指向错误仓库的问题
+// 所有更新地址改为背日单（gaokao-jpvocab）自己的仓库
 const APK_DOWNLOAD_SOURCES = [
-  { name: 'GitHub Releases', url: 'https://github.com/xdbzys/gaokao-vocab/releases/latest/download/app-debug.apk' },
-  { name: 'GitHub Pages', url: 'https://xdbzys.github.io/gaokao-vocab/app-debug.apk' },
-  { name: 'Gitee', url: 'https://gitee.com/xdbzys/app/raw/master/gaokao-vocab.apk' },
+  { name: 'GitHub Releases', url: 'https://github.com/xdbzys/gaokao-jpvocab/releases/latest/download/app-debug.apk' },
+  { name: 'GitHub Pages', url: 'https://xdbzys.github.io/gaokao-jpvocab/app-debug.apk' },
+  { name: 'Gitee', url: 'https://gitee.com/xdbzys/app/raw/master/gaokao-jpvocab.apk' },
 ];
 // 内置更新服务器地址
 const GITEE_OWNER = 'xdbzys';
@@ -10970,7 +10970,7 @@ function App() {
 
       // 方式1: jsdelivr CDN（国内最快）
       try {
-        const cdnResp = await fetch('https://cdn.jsdelivr.net/gh/xdbzys/gaokao-vocab@master/app-update.json?_t=' + Date.now());
+        const cdnResp = await fetch('https://cdn.jsdelivr.net/gh/xdbzys/gaokao-jpvocab@master/app-update.json?_t=' + Date.now());
         if (cdnResp.ok) serverData = await cdnResp.json();
       } catch (e) { /* CDN 失败 */ }
 
@@ -11100,7 +11100,7 @@ function App() {
       let data;
       // 第一优先：GitHub Pages（deploy 后立即生效，无 CDN 缓存延迟）
       try {
-        const ghUrl = `https://xdbzys.github.io/gaokao-vocab/app-update.json?_t=${Date.now()}`;
+        const ghUrl = `https://xdbzys.github.io/gaokao-jpvocab/app-update.json?_t=${Date.now()}`;
         console.log('[Update] Trying GitHub Pages:', ghUrl);
         const ghResp = await fetch(ghUrl, { cache: 'no-store' });
         if (ghResp.ok) { data = await ghResp.json(); console.log('[Update] GitHub Pages success:', data); }
@@ -11109,7 +11109,7 @@ function App() {
         console.warn('[Update] GitHub Pages failed:', ghErr.message);
         // 第二回退：jsdelivr CDN
         try {
-          const cdnUrl = `https://cdn.jsdelivr.net/gh/xdbzys/gaokao-vocab@master/app-update.json?_t=${Date.now()}`;
+          const cdnUrl = `https://cdn.jsdelivr.net/gh/xdbzys/gaokao-jpvocab@master/app-update.json?_t=${Date.now()}`;
           console.log('[Update] Trying jsdelivr CDN:', cdnUrl);
           const cdnResp = await fetch(cdnUrl, { cache: 'no-store' });
           if (cdnResp.ok) { data = await cdnResp.json(); console.log('[Update] jsdelivr CDN success:', data); }
@@ -12863,7 +12863,7 @@ function App() {
               <h3 style={{ color: '#92400e' }}>📱 网络修复更新</h3>
               <p className="muted">APP内网络检测失败，点击下方按钮将在浏览器中打开更新页面，下载后安装即可。安装后更新将自动恢复。</p>
               <button className="primary" onClick={() => {
-                window.open('https://cdn.jsdelivr.net/gh/xdbzys/gaokao-vocab@master/update.html', '_blank');
+                window.open('https://cdn.jsdelivr.net/gh/xdbzys/gaokao-jpvocab@master/update.html', '_blank');
               }} style={{ background: '#f59e0b' }}>在浏览器中更新</button>
             </div>
           )}

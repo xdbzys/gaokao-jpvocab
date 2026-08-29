@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>背群英 - 更新</title>
+<title>背日单 - 更新</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -20,25 +20,23 @@ h1{font-size:22px;color:#333;margin:12px 0 4px}
 </head>
 <body>
 <div class="card">
-<h1>📚 背群英</h1>
-<p class="sub">v2.8.20 · 更新下载</p>
+<h1>📖 背日单</h1>
+<p class="sub">v2.45.0 · 更新下载</p>
 <div class="log">
 <b>【修复】</b><br>
-✅ 修复更新检查失败（新增4条线路）<br>
-✅ 修复答题后显示错误答案<br>
-✅ 修复自动发音播放错误单词<br>
-<b>【优化】</b><br>
-✨ 增强导入功能识别<br>
-✨ 删除词库占位符数据
+✅ 彻底修复更新系统（所有地址指向错误仓库的问题）<br>
+✅ 新增 GitHub Pages / jsDelivr / Gitee 多条更新线路<br>
+✅ 修复 apkUrl 为空导致应用内更新失效的问题<br>
+<b>【说明】</b><br>
+安装此版本后，以后的更新可在 APP 内自动完成<br>
 </div>
-<a class="btn pri" id="d1" href="https://github.com/xdbzys/gaokao-vocab/releases/download/v90/app-debug.apk">📥 下载更新（GitHub）</a>
-<a class="btn sec" id="d2" href="https://gitee.com/xdbzys/app/raw/master/gaokao-vocab.apk">📥 备用下载（Gitee）</a>
-<p class="tip">点击按钮后等待下载完成<br>下载完成后在通知栏点击安装<br>安装后以后更新将自动在APP内完成</p>
+<a class="btn pri" id="d1" href="https://github.com/xdbzys/gaokao-jpvocab/releases/latest/download/app-debug.apk">📥 下载更新（GitHub）</a>
+<a class="btn sec" id="d2" href="https://gitee.com/xdbzys/app/raw/master/gaokao-jpvocab.apk">📥 备用下载（Gitee）</a>
+<p class="tip">下载后点击安装即可，学习记录不会丢失<br>如无法下载，请复制链接用浏览器打开</p>
 </div>
 <script>
-// 自动检测下载链接可用性，高亮推荐链接
-fetch('https://gitee.com/xdbzys/app/raw/master/gaokao-vocab.apk',{method:'HEAD',mode:'no-cors'}).then(()=>{}).catch(()=>{document.getElementById('d2').style.opacity='.4'});
-fetch('https://github.com/xdbzys/gaokao-vocab/releases/download/v90/app-debug.apk',{method:'HEAD',mode:'no-cors'}).then(()=>{}).catch(()=>{document.getElementById('d1').style.opacity='.4'});
+fetch('https://gitee.com/xdbzys/app/raw/master/gaokao-jpvocab.apk',{method:'HEAD',mode:'no-cors'}).then(()=>{}).catch(()=>{document.getElementById('d2').style.opacity='.4'});
+fetch('https://github.com/xdbzys/gaokao-jpvocab/releases/latest/download/app-debug.apk',{method:'HEAD',mode:'no-cors'}).then(()=>{}).catch(()=>{document.getElementById('d1').style.opacity='.4'});
 </script>
 </body>
 </html>
