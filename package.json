@@ -11,19 +11,17 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.1",
-    "@capacitor/cli": "^8.4.1",
-    "@capacitor/core": "^8.4.1",
-    "@capacitor/filesystem": "^8.1.2",
-    "@vitejs/plugin-react": "latest",
-    "jszip": "latest",
-    "pdfjs-dist": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "tesseract.js": "latest",
-    "vite": "latest"
+    "@capacitor/android": "8.4.1",
+    "@capacitor/cli": "8.4.1",
+    "@capacitor/core": "8.4.1",
+    "@capacitor/filesystem": "8.1.2",
+    "@vitejs/plugin-react": "4.3.4",
+    "jszip": "3.10.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "vite": "6.0.7"
   },
   "devDependencies": {
-    "vite-plugin-singlefile": "^2.3.3"
+    "vite-plugin-singlefile": "2.3.3"
   }
 }

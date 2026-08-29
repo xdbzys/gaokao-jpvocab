@@ -3,18 +3,49 @@ import { createRoot } from 'react-dom/client';
 import JSZip from 'jszip';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { createWorker } from 'tesseract.js';
-import * as pdfjsLib from 'pdfjs-dist';
 import './styles.css';
 import { getWordEnrichment } from './wordEnrichment';
 import { adjToAdverbRules, comparativeRules, pastTenseRules, irregularVerbs, presentParticipleRules, nounPluralRules } from './wordTransformations';
 import { masterVocabSeed, masterVocabLookup } from './gaokaoMasterVocab';
 
+// PDF.js 和 Tesseract.js 改为 CDN 动态加载，避免 import.meta 语法导致安卓 WebView 蓝屏
+let _pdfjsLib = null;
+let _tesseractLoaded = false;
+
+async function loadPdfjs() {
+  if (_pdfjsLib) return _pdfjsLib;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  _pdfjsLib = window['pdfjsLib'];
+  if (_pdfjsLib) {
+    _pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js';
+  }
+  return _pdfjsLib;
+}
+
+async function loadTesseract() {
+  if (_tesseractLoaded) return window.Tesseract;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  _tesseractLoaded = true;
+  return window.Tesseract;
+}
+
 /* ============================
    APP 版本常量
    ============================ */
-const APP_VERSION = '2.45.0';
-const APP_VERSION_CODE = 197;
+const APP_VERSION = '2.46.0';
+const APP_VERSION_CODE = 198;
 // v2.45.0 更新渠道修复：修复所有更新源指向错误仓库的问题
 // 所有更新地址改为背日单（gaokao-jpvocab）自己的仓库
 const APK_DOWNLOAD_SOURCES = [
@@ -34,8 +65,6 @@ const UPDATE_SERVER_API = `https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE
 const UPDATE_SERVER_URL_CACHE = () => `${UPDATE_SERVER_RAW}?_t=${Date.now()}`;
 // 正确检测原生APP：Capacitor Web 运行时在浏览器中也会注入 window.Capacitor，需用 isNativePlatform 区分
 const isNativeApp = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform ? Capacitor.isNativePlatform() : !!(window.cordova);
-
-try { pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`; } catch {}
 
 /* ============================
    一、内置词库数据
@@ -9372,6 +9401,7 @@ async function extractPptxText(file) {
 
 async function extractPdfText(file) {
   try {
+    const pdfjsLib = await loadPdfjs();
     const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
     const pages = [];
     for (let i = 1; i <= doc.numPages; i++) {
@@ -9397,10 +9427,11 @@ async function extractDocxText(file) {
 async function extractImageText(file) {
   try {
     setImportStatus('正在识别图片文字，可能需要十几秒...');
-    const worker = await createWorker('eng+chi_sim', 1, {
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5',
-      langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js-lang@5',
+    const Tesseract = await loadTesseract();
+    const worker = await Tesseract.createWorker('eng+chi_sim', 1, {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/worker.min.js',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.0',
+      langPath: 'https://cdn.jsdelivr.net/npm/tesseract.js-lang@5.0.0',
     });
     await worker.setParameters({ tessedit_pageseg_mode: '4', preserve_interword_spaces: '1' });
     const result = await worker.recognize(file);
