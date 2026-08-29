@@ -10736,41 +10736,96 @@ function App() {
   // 数据恢复：从 JSON 文件导入所有数据
   async function importData() {
     const dirName = '高考词汇备份';
-    // APP端：优先从 Documents/高考词汇备份/ 读取
+    // APP端：扫描多个可能的备份目录
     if (isNativeApp) {
-      try {
-        const result = await Filesystem.readdir({ path: dirName, directory: Directory.Documents });
-        const files = (result.files || []).filter(f => f.name.endsWith('.json')).sort((a, b) => b.name.localeCompare(a.name));
-        if (files.length > 0) {
-          const list = files.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
-          const choice = prompt(`在 Documents/${dirName}/ 中找到以下备份文件：\n\n${list}\n\n请输入序号选择要恢复的文件（留空取消）：`);
-          if (choice === null || choice.trim() === '') return;
-          const idx = parseInt(choice.trim()) - 1;
-          if (idx < 0 || idx >= files.length) { alert('序号无效'); return; }
-          const fileContent = await Filesystem.readFile({
-            path: `${dirName}/${files[idx].name}`,
-            directory: Directory.Documents,
-            encoding: Encoding.UTF8
-          });
-          const data = JSON.parse(fileContent.data);
-          if (!data || typeof data !== 'object') throw new Error('文件格式错误');
-          let count = 0;
-          Object.entries(data).forEach(([k, v]) => {
-            if (typeof v === 'string') { localStorage.setItem(k, v); count++; }
-          });
-          alert(`成功从 ${files[idx].name} 恢复 ${count} 项数据，页面即将刷新。`);
-          window.location.reload();
-          return;
+      const allFound = []; // { name, path, directory, label }
+
+      // 搜索路径列表：兼容新旧版本的多个可能备份位置
+      const searchPaths = [
+        { path: dirName, directory: Directory.Documents, label: `Documents/${dirName}` },
+        { path: '背日单备份', directory: Directory.Documents, label: 'Documents/背日单备份' },
+        { path: '日语单词备份', directory: Directory.Documents, label: 'Documents/日语单词备份' },
+        { path: '', directory: Directory.Documents, label: 'Documents' },
+        { path: '', directory: Directory.Downloads, label: 'Downloads' },
+      ];
+
+      for (const sp of searchPaths) {
+        try {
+          const result = await Filesystem.readdir({ path: sp.path, directory: sp.directory });
+          const jsonFiles = (result.files || [])
+            .filter(f => f.name.endsWith('.json') && (
+              f.name.includes('gaokao') ||
+              f.name.includes('backup') ||
+              f.name.includes('备份') ||
+              f.name.includes('背日单') ||
+              f.name.includes('jpvocab')
+            ))
+            .map(f => ({
+              name: f.name,
+              path: sp.path ? `${sp.path}/${f.name}` : f.name,
+              directory: sp.directory,
+              label: sp.label
+            }));
+          allFound.push(...jsonFiles);
+        } catch (e) {
+          // 目录不存在则跳过
         }
-        alert(`Documents/${dirName}/ 中没有找到备份文件。\n\n请先备份数据，或选择其他文件恢复。`);
-        return;
-      } catch (e) {
-        if (e.message && e.message.includes('cancel')) return;
-        console.warn('[Restore] Filesystem readdir failed:', e);
-        // 读取失败，回退到文件选择
+      }
+
+      // 去重
+      const seen = new Set();
+      const uniqueFiles = allFound.filter(f => {
+        const key = `${f.directory}/${f.path}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).sort((a, b) => b.name.localeCompare(a.name));
+
+      if (uniqueFiles.length > 0) {
+        const list = uniqueFiles.map((f, i) => `${i + 1}. ${f.name}  (${f.label})`).join('\n');
+        const choice = prompt(`找到以下备份文件（共 ${uniqueFiles.length} 个）：\n\n${list}\n\n请输入序号选择要恢复的文件：\n  • 输入数字序号 → 从对应文件恢复\n  • 输入 0 → 手动选择其他文件\n  • 留空 → 取消`);
+        if (choice === null || choice.trim() === '') return;
+        const choiceStr = choice.trim();
+
+        // 输入 0 表示手动选择
+        if (choiceStr === '0') {
+          // 继续往下走，用文件选择器
+        } else {
+          const idx = parseInt(choiceStr) - 1;
+          if (isNaN(idx) || idx < 0 || idx >= uniqueFiles.length) { alert('序号无效'); return; }
+          try {
+            const fileContent = await Filesystem.readFile({
+              path: uniqueFiles[idx].path,
+              directory: uniqueFiles[idx].directory,
+              encoding: Encoding.UTF8
+            });
+            const data = JSON.parse(fileContent.data);
+            if (!data || typeof data !== 'object') throw new Error('文件格式错误');
+            let count = 0;
+            Object.entries(data).forEach(([k, v]) => {
+              if (typeof v === 'string') { localStorage.setItem(k, v); count++; }
+            });
+            alert(`成功从 ${uniqueFiles[idx].name} 恢复 ${count} 项数据，页面即将刷新。`);
+            window.location.reload();
+            return;
+          } catch (err) {
+            alert('读取文件失败：' + err.message + '\n\n将切换到手动选择模式。');
+            // 失败则回退到手动选择
+          }
+        }
+      } else {
+        const goManual = confirm(
+          '未自动找到备份文件。\n\n' +
+          '可能的原因：\n' +
+          '1. 备份文件在其他文件夹中\n' +
+          '2. 旧版本备份位置不同\n' +
+          '3. 文件被移动或删除\n\n' +
+          '是否手动选择备份文件？'
+        );
+        if (!goManual) return;
       }
     }
-    // 网页端或读取失败：让用户手动选择文件
+    // 网页端 / 手动选择模式：让用户选择文件
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -10789,10 +10844,10 @@ function App() {
               count++;
             }
           });
-          alert(`成功恢复 ${count} 项数据，页面即将刷新。`);
+          alert(`成功从「${file.name}」恢复 ${count} 项数据，页面即将刷新。`);
           window.location.reload();
         } catch (err) {
-          alert('恢复失败：' + err.message);
+          alert('恢复失败：' + err.message + '\n\n请确认选择的是背日单备份文件（.json 格式）。');
         }
       };
       reader.readAsText(file);
