@@ -1,8 +1,8 @@
 {
-  "version": "2.45.0",
-  "versionCode": 197,
-  "changelog": "🎉 背日单 v2.45.0 更新修复版\n\n本次更新彻底修复了更新系统问题：\n- 根因：更新检查 URL 和下载源全部错误地指向了背群英仓库\n- 修复：所有更新地址改为背日单（gaokao-jpvocab）自己的仓库\n- 新增 GitHub Pages / jsDelivr / Gitee 多条更新线路\n- 修复 app-update.json 中 apkUrl 为空导致应用内更新失效的问题\n\n点击下方\"立即更新\"即可在应用内下载安装。",
-  "devNotes": "v2.45.0: Fixed all update URLs pointing to wrong repo (gaokao-vocab). Changed all update sources to gaokao-jpvocab repo. Added GitHub Pages + jsDelivr + Gitee fallbacks.",
+  "version": "2.46.0",
+  "versionCode": 198,
+  "changelog": "🎉 背日单 v2.46.0 已发布！\n\n本次更新修复了两个重要问题：\n\n【修复】蓝屏/白屏无法打开\n- 根因：pdfjs-dist 和 tesseract.js 最新版使用 import.meta 语法，在安卓 WebView 中不支持，导致整个应用无法加载\n- 修复：改为 CDN 按需加载，不再打包这两个库，同时锁定了所有依赖版本防止类似问题\n- 附带优化：应用体积减小，启动更快\n\n【修复】恢复原始图标\n- 改回背日单最初的图标样式\n\n点击下方\"立即更新\"即可在应用内下载安装。",
+  "devNotes": "v2.46.0: Fixed blue screen caused by import.meta syntax in bundled pdfjs-dist and tesseract.js. Switched to CDN dynamic loading. Pinned all dependency versions. Added Vite plugin to strip remaining import.meta.url from @capacitor/filesystem web implementation. Restored original app icon.",
   "apkUrl": "https://github.com/xdbzys/gaokao-jpvocab/releases/latest/download/app-debug.apk",
   "webHtmlUrl": "https://xdbzys.github.io/gaokao-jpvocab/背日单.html"
 }
