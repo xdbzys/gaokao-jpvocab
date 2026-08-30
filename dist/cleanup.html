@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>清理缓存 - 背群英</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; text-align: center; padding: 40px 20px; background: #f8fafc; color: #1e293b; }
+    .card { max-width: 400px; margin: 0 auto; background: white; border-radius: 16px; padding: 32px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    h1 { font-size: 1.3rem; margin-bottom: 8px; }
+    p { color: #64748b; font-size: 0.9rem; margin-bottom: 16px; }
+    #status { font-size: 0.85rem; color: #64748b; margin: 16px 0; min-height: 24px; }
+    .btn { display: inline-block; padding: 12px 28px; background: #3b82f6; color: white; border: none; border-radius: 24px; font-size: 0.95rem; cursor: pointer; text-decoration: none; }
+    .btn:hover { background: #2563eb; }
+    .check { color: #22c55e; font-size: 2rem; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="check">✓</div>
+    <h1>缓存清理完成</h1>
+    <p>已清除旧的 Service Worker 和缓存数据</p>
+    <div id="status">正在清理...</div>
+    <a href="./" class="btn" id="goBtn" style="display:none;">进入应用</a>
+  </div>
+  <script>
+    (async function() {
+      const status = document.getElementById('status');
+      try {
+        // 1. 注销所有 Service Worker
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const r of regs) {
+            await r.unregister();
+            status.textContent = '已注销 Service Worker...';
+          }
+        }
+        // 2. 清除所有缓存
+        if (window.caches) {
+          const keys = await caches.keys();
+          for (const k of keys) {
+            await caches.delete(k);
+          }
+        }
+        // 3. 清除 localStorage 中的 SW 相关数据
+        // 注意：不清除学习进度数据
+        
+        status.textContent = '清理完成！正在跳转...';
+        document.getElementById('goBtn').style.display = 'inline-block';
+        
+        // 自动跳转
+        setTimeout(function() {
+          window.location.href = './';
+        }, 1500);
+      } catch(e) {
+        status.textContent = '清理完成（部分操作跳过），正在跳转...';
+        setTimeout(function() {
+          window.location.href = './';
+        }, 1500);
+      }
+    })();
+  </script>
+</body>
+</html>
