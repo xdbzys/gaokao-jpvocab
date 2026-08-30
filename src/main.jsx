@@ -44,8 +44,8 @@ async function loadTesseract() {
 /* ============================
    APP 版本常量
    ============================ */
-const APP_VERSION = '2.46.0';
-const APP_VERSION_CODE = 198;
+const APP_VERSION = '2.47.0';
+const APP_VERSION_CODE = 199;
 // v2.45.0 更新渠道修复：修复所有更新源指向错误仓库的问题
 // 所有更新地址改为背日单（gaokao-jpvocab）自己的仓库
 const APK_DOWNLOAD_SOURCES = [
