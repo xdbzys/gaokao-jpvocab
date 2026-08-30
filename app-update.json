@@ -1,8 +1,8 @@
 {
-  "version": "2.48.0",
-  "versionCode": 200,
-  "changelog": "🎉 背日单 v2.48.0 已发布！\n\n本次更新内容：\n\n【修复】应用启动蓝屏问题\n- 根因：wordBookMapRef 在 useMemo 之后声明，导致 TDZ 错误\n- 修复：调整声明顺序，先声明 ref 再声明 useMemo\n\n【修复】更换应用图标\n- 更换为正确的背日单红色「日」字图标\n\n【修复】背诵模式锁定，更新后不再自动切换\n- 新增独立存储背诵模式，确保设置不丢失\n\n【修复】数据备份恢复优化\n- 导出全部 localStorage 数据，不再遗漏\n- 新增多目录扫描和手动选择备份文件\n\n点击下方\"立即更新\"即可在应用内下载安装。",
-  "devNotes": "v2.48.0: Fixed blue screen (TDZ error from wordBookMapRef declared after allWords useMemo). Replaced app icon with red '日' character icon. Added independent practice mode storage. Fixed data export to include all localStorage keys and improved restore with multi-directory scanning.",
+  "version": "2.49.0",
+  "versionCode": 201,
+  "changelog": "🎉 背日单 v2.49.0 已发布！\n\n本次更新内容：\n\n【修复】数据恢复显示条数不准确\n- 恢复后现在显示实际数据条数（如学习进度、错词等）\n- 不再只显示localStorage键数，而是显示完整数据明细\n- 修复非字符串类型数据可能被跳过恢复的问题\n\n点击下方\"立即更新\"即可在应用内下载安装。",
+  "devNotes": "v2.49.0: Fixed data restore message to show actual item counts. Added restoreAllData helper with detailed breakdown. Fixed typeof string check that could skip non-string values.",
   "apkUrl": "https://github.com/xdbzys/gaokao-jpvocab/releases/latest/download/app-debug.apk",
   "webHtmlUrl": "https://xdbzys.github.io/gaokao-jpvocab/背日单.html"
 }

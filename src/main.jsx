@@ -44,8 +44,8 @@ async function loadTesseract() {
 /* ============================
    APP 版本常量
    ============================ */
-const APP_VERSION = '2.48.0';
-const APP_VERSION_CODE = 200;
+const APP_VERSION = '2.49.0';
+const APP_VERSION_CODE = 201;
 // v2.45.0 更新渠道修复：修复所有更新源指向错误仓库的问题
 // 所有更新地址改为背日单（gaokao-jpvocab）自己的仓库
 const APK_DOWNLOAD_SOURCES = [
@@ -10770,6 +10770,38 @@ function App() {
     alert(`数据已备份（共 ${totalKeys} 项）！文件名为 ${fileName}\n\n保存位置：浏览器"下载"文件夹\n请将此文件保存到安全位置，换设备或更新时可恢复。`);
   }
 
+  // v2.49.0 统一数据恢复函数：恢复所有 localStorage 键，并统计实际数据条数
+  function restoreAllData(data) {
+    let count = 0;
+    let totalItems = 0;
+    let breakdown = [];
+    const labels = {
+      'gaokao_progress': '学习进度', 'gaokao_wrong_words': '错词本', 'gaokao_study_log': '每日学习记录',
+      'gaokao_settings': '应用设置', 'gaokao_study_books': '学习词库', 'gaokao_library_books': '词库选择',
+      'gaokao_hide_mastered': '隐藏已掌握', 'gaokao_dismissed_version': '版本标记', 'gaokao_first_use': '首次使用日期',
+      'gaokao_practice_mode': '背诵模式', 'gaokao_hidden_books': '隐藏词库', 'gaokao_study_words_log': '学习单词记录',
+      'gaokao_downloaded': '下载缓存', 'gaokao_avatar': '头像', 'customBooks': '自定义词库',
+      'aiImportConfig': 'AI导入配置', 'gaokao_word_family_cache': '词族缓存', 'gaokao_confusing_cache': '易混词缓存',
+    };
+    Object.entries(data).forEach(([k, v]) => {
+      const val = typeof v === 'string' ? v : JSON.stringify(v);
+      localStorage.setItem(k, val);
+      count++;
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          totalItems += parsed.length;
+          breakdown.push(`  • ${labels[k] || k}：${parsed.length} 条`);
+        } else if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          const n = Object.keys(parsed).length;
+          totalItems += n;
+          breakdown.push(`  • ${labels[k] || k}：${n} 条`);
+        }
+      } catch { /* 非JSON值，跳过统计 */ }
+    });
+    return { count, totalItems, breakdown };
+  }
+
   // 数据恢复：从 JSON 文件导入所有数据
   async function importData() {
     const dirName = '日语单词备份';
@@ -10838,11 +10870,8 @@ function App() {
             });
             const data = JSON.parse(fileContent.data);
             if (!data || typeof data !== 'object') throw new Error('文件格式错误');
-            let count = 0;
-            Object.entries(data).forEach(([k, v]) => {
-              if (typeof v === 'string') { localStorage.setItem(k, v); count++; }
-            });
-            alert(`成功从 ${uniqueFiles[idx].name} 恢复 ${count} 项数据，页面即将刷新。`);
+            const result = restoreAllData(data);
+            alert(`✅ 成功从 ${uniqueFiles[idx].name} 恢复 ${result.count} 个存储项，共 ${result.totalItems} 条数据！\n\n数据明细：\n${result.breakdown.join('\n')}\n\n页面即将刷新。`);
             window.location.reload();
             return;
           } catch (err) {
@@ -10874,14 +10903,8 @@ function App() {
         try {
           const data = JSON.parse(ev.target.result);
           if (!data || typeof data !== 'object') throw new Error('文件格式错误');
-          let count = 0;
-          Object.entries(data).forEach(([k, v]) => {
-            if (typeof v === 'string') {
-              localStorage.setItem(k, v);
-              count++;
-            }
-          });
-          alert(`成功从「${file.name}」恢复 ${count} 项数据，页面即将刷新。`);
+          const result = restoreAllData(data);
+          alert(`✅ 成功从「${file.name}」恢复 ${result.count} 个存储项，共 ${result.totalItems} 条数据！\n\n数据明细：\n${result.breakdown.join('\n')}\n\n页面即将刷新。`);
           window.location.reload();
         } catch (err) {
           alert('恢复失败：' + err.message + '\n\n请确认选择的是背日单备份文件（.json 格式）。');
