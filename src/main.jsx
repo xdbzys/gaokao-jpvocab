@@ -44,8 +44,8 @@ async function loadTesseract() {
 /* ============================
    APP 版本常量
    ============================ */
-const APP_VERSION = '2.47.0';
-const APP_VERSION_CODE = 199;
+const APP_VERSION = '2.48.0';
+const APP_VERSION_CODE = 200;
 // v2.45.0 更新渠道修复：修复所有更新源指向错误仓库的问题
 // 所有更新地址改为背日单（gaokao-jpvocab）自己的仓库
 const APK_DOWNLOAD_SOURCES = [
@@ -7823,6 +7823,7 @@ const builtInDownloads = [
 
 const PROGRESS_KEY = 'gaokao_progress';
 const SETTINGS_KEY = 'gaokao_settings';
+const MODE_KEY = 'gaokao_practice_mode';
 const STUDYLOG_KEY = 'gaokao_study_log';
 const STUDY_WORDS_KEY = 'gaokao_study_words_log';
 const DOWNLOAD_KEY = 'gaokao_downloaded';
@@ -7872,6 +7873,10 @@ function saveProgress(progress) {
 
 function loadSettings() {
   try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    // v2.48.0 独立存储背诵模式，防止设置对象变化时模式丢失
+    const savedMode = localStorage.getItem(MODE_KEY);
+    if (savedMode && !saved.mode) saved.mode = savedMode;
     return {
       dailyGoal: 50,
       speakRate: 0.78,
@@ -7886,15 +7891,18 @@ function loadSettings() {
       autoMaster: false,
       navAutoSpeak: true,
       volumeKeyNav: false,
-      ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
+      ...saved
     };
   } catch {
-    return { dailyGoal: 50, speakRate: 0.78, mode: 'en-to-cn', difficulty: 'easy', detailMode: 'brief', shuffleMode: false, autoJump: false, autoJumpDelay: 1500, showAnnouncement: true, autoSpeak: false, autoMaster: false, navAutoSpeak: true, volumeKeyNav: false };
+    const savedMode = localStorage.getItem(MODE_KEY);
+    return { dailyGoal: 50, speakRate: 0.78, mode: savedMode || 'en-to-cn', difficulty: 'easy', detailMode: 'brief', shuffleMode: false, autoJump: false, autoJumpDelay: 1500, showAnnouncement: true, autoSpeak: false, autoMaster: false, navAutoSpeak: true, volumeKeyNav: false };
   }
 }
 
 function saveSettings(settings) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  // v2.48.0 独立存储背诵模式，确保永不丢失
+  if (settings.mode) localStorage.setItem(MODE_KEY, settings.mode);
 }
 
 function loadBooks() {
@@ -9957,6 +9965,10 @@ function App() {
   const currentBookIds = section === 'learn' ? studyBookIds : libraryBookIds;
   const activeBook = section === 'learn' ? learnActiveBook : libraryActiveBook;
 
+  // 词库映射 ref：供详情页和背诵页显示单词所属词库
+  // 注意：ref 必须在 allWords 之前声明，否则 useMemo 中访问 wordBookMapRef 会触发 TDZ 错误（导致蓝屏）
+  const wordBookMapRef = useRef({});
+
   // 全部词汇合并（词根词缀、对比、易错词基于全量词汇）
   const allWords = useMemo(() => {
     // v2.44.0 构建 wordBookMap：记录每个单词出现在哪些词库
@@ -9976,9 +9988,6 @@ function App() {
     wordBookMapRef.current = map;
     return items;
   }, [books]);
-
-  // 词库映射 ref：供详情页和背诵页显示单词所属词库
-  const wordBookMapRef = useRef({});
 
   // 统一处理：点击单词 → 词库存在则跳转详情+发音，不存在则只发音
   function speakOrNavigate(word) {
@@ -10713,20 +10722,17 @@ function App() {
 
   // 数据备份：导出所有 localStorage 数据为 JSON 文件
   async function exportData() {
-    const keys = [
-      'gaokao_progress', 'gaokao_settings', 'gaokao_study_log', 'gaokao_study_words_log', 'gaokao_downloaded',
-      'gaokao_wrong_words', 'customBooks', 'customSpelling', 'aiImportConfig',
-      'gaokao_study_books', 'gaokao_library_books', 'gaokao_hide_mastered',
-      'gaokao_dismissed_version', 'gaokao_avatar', 'gaokao_first_use'
-    ];
+    // v2.48.0: 导出全部 localStorage，不再使用硬编码列表，避免遗漏数据
     const data = {};
-    keys.forEach(k => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
       const v = localStorage.getItem(k);
       if (v !== null) data[k] = v;
-    });
+    }
+    const totalKeys = Object.keys(data).length;
     const jsonStr = JSON.stringify(data, null, 2);
-    const fileName = `gaokao-backup-${new Date().toISOString().slice(0,10)}.json`;
-    const dirName = '高考词汇备份';
+    const fileName = `jp-backup-${new Date().toISOString().slice(0,10)}.json`;
+    const dirName = '日语单词备份';
 
     // APP端：保存到 Documents/高考词汇备份/ 目录，方便查找
     if (isNativeApp) {
@@ -10740,7 +10746,7 @@ function App() {
           encoding: Encoding.UTF8
         });
         const uri = result.uri || '';
-        const msg = `数据已备份！\n\n保存位置：Documents/${dirName}/${fileName}\n${uri ? '\n完整路径：' + uri : ''}\n\n打开手机"文件管理器" → "Documents" → "高考词汇备份" 即可找到。`;
+        const msg = `数据已备份（共 ${totalKeys} 项）！\n\n保存位置：Documents/${dirName}/${fileName}\n${uri ? '\n完整路径：' + uri : ''}\n\n打开手机"文件管理器" → "Documents" → "${dirName}" 即可找到。`;
         alert(msg);
         return;
       } catch (e) {
@@ -10761,12 +10767,12 @@ function App() {
     const a = document.createElement('a');
     a.href = url; a.download = fileName; a.click();
     URL.revokeObjectURL(url);
-    alert(`数据已备份！文件名为 ${fileName}\n\n保存位置：浏览器"下载"文件夹\n请将此文件保存到安全位置，换设备或更新时可恢复。`);
+    alert(`数据已备份（共 ${totalKeys} 项）！文件名为 ${fileName}\n\n保存位置：浏览器"下载"文件夹\n请将此文件保存到安全位置，换设备或更新时可恢复。`);
   }
 
   // 数据恢复：从 JSON 文件导入所有数据
   async function importData() {
-    const dirName = '高考词汇备份';
+    const dirName = '日语单词备份';
     // APP端：扫描多个可能的备份目录
     if (isNativeApp) {
       const allFound = []; // { name, path, directory, label }
@@ -10775,7 +10781,7 @@ function App() {
       const searchPaths = [
         { path: dirName, directory: Directory.Documents, label: `Documents/${dirName}` },
         { path: '背日单备份', directory: Directory.Documents, label: 'Documents/背日单备份' },
-        { path: '日语单词备份', directory: Directory.Documents, label: 'Documents/日语单词备份' },
+        { path: '高考词汇备份', directory: Directory.Documents, label: 'Documents/高考词汇备份' },
         { path: '', directory: Directory.Documents, label: 'Documents' },
         { path: '', directory: Directory.Downloads, label: 'Downloads' },
       ];
